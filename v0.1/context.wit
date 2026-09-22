@@ -59,6 +59,22 @@ interface context {
         ///   named queries from different handlers.
         register-query: func(name: string, handler-id: u32) -> result<_, string>;
 
+        /// Registers a named, structured write a process outside the game (the management
+        /// API, SOR-037) can ask for - "spawn an npc", "give coins", anything the SE must do
+        /// on request rather than merely report.
+        ///
+        /// Unlike a query, an action is dispatched **on demand**, one host<->guest crossing
+        /// per call - never from the tick loop, and never queued against it. It runs on the
+        /// caller's own task (the management API's own tokio task, never the tick's), the
+        /// same "off the tick's call stack" rule RCON's own command dispatch already relies
+        /// on for exactly this reason. `handle-action` answers it; see `plugin.wit`.
+        ///
+        /// * `name`: A stable, unique key (`"spawn-npc"`, `"give-item"`, ...). Registering a
+        ///   name another plugin already holds is refused.
+        /// * `handler-id`: Passed back to `handle-action` so one plugin can serve several
+        ///   named actions from different handlers.
+        register-action: func(name: string, handler-id: u32) -> result<_, string>;
+
         /// Registers a permission node with the server.
         register-permission: func(permission: permission) -> result<_, string>;
 

@@ -115,6 +115,12 @@ world plugin {
     /// uses.
     export handle-query: func(query-id: u32, server: server-instance) -> result<string, string>;
 
+    /// Answers a call to a named action this plugin registered with `register-action`
+    /// (SOR-037's extensible write side). Called once per external request, on that
+    /// request's own task - never from the tick loop, never queued against it. `payload` is
+    /// whatever JSON the caller sent; this function decides what it means.
+    export handle-action: func(action-id: u32, server: server-instance, payload: string) -> result<string, string>;
+
     /// Processes an incoming message from another plugin if possible, and returns (a possibly empty) response.
     export handle-ipc-message: func(sender: plugin-id, message: ipc-message) -> result<ipc-message, string>;
 
