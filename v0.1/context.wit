@@ -45,6 +45,20 @@ interface context {
         /// * `permission`: The required permission node to execute this command.
         register-command: func(command: command, permission: string);
 
+        /// Registers a named, structured read a process outside the game (the management
+        /// API, SOR-037) can ask for without ever touching a lock the tick takes.
+        ///
+        /// The handler is called at most once per publish interval (`snapshot-interval-
+        /// ticks` in config, default once a second) - never synchronously per external
+        /// request, which is what keeps an unbounded number of readers from costing the tick
+        /// anything. `handle-query` answers it; see `plugin.wit`.
+        ///
+        /// * `name`: A stable, unique key (`"item-stats"`, ...). Registering a name another
+        ///   plugin already holds is refused.
+        /// * `handler-id`: Passed back to `handle-query` so one plugin can serve several
+        ///   named queries from different handlers.
+        register-query: func(name: string, handler-id: u32) -> result<_, string>;
+
         /// Registers a permission node with the server.
         register-permission: func(permission: permission) -> result<_, string>;
 

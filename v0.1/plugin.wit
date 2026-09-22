@@ -107,6 +107,14 @@ world plugin {
     /// Dispatches a scheduled task execution to the plugin.
     export handle-task: func(handler-id: u32, server: server-instance);
 
+    /// Answers a named query this plugin registered with `context.register-query`
+    /// (SOR-037's extensible read side). Called at most once per publish interval, never
+    /// per external request - see `context.wit`'s own doc on `register-query` for why that
+    /// is what keeps this off the tick's clock. `Err` publishes as "unavailable", the same
+    /// "absence of a reading is never a zero" rule the rest of the management API already
+    /// uses.
+    export handle-query: func(query-id: u32, server: server-instance) -> result<string, string>;
+
     /// Processes an incoming message from another plugin if possible, and returns (a possibly empty) response.
     export handle-ipc-message: func(sender: plugin-id, message: ipc-message) -> result<ipc-message, string>;
 
