@@ -1303,7 +1303,15 @@ interface event {
 
     record block-explode-event-data {
         block-pos: block-pos,
+        /// The world the explosion is in. Needed here, unlike most block events, because an
+        /// explosion has no player to read a world from - TNT and beds explode on their own.
+        target-world: %world,
         yield-rate: f32,
+        /// Every block position the explosion is about to destroy. A handler removes a
+        /// position to shield that block; positions it does not remove are destroyed as
+        /// usual. Empty when the event fires for a reason with no block list (a triggered
+        /// block such as a TNT-triggering copper bulb, `BlockInteraction::TriggerBlock`).
+        blocks: list<block-pos>,
         cancelled: bool
     }
 
