@@ -118,6 +118,21 @@ interface server {
         list-entries: func() -> list<whitelist-entry>;
     }
 
+    /// A player who has joined this server, from core's `known-players.json` (Sorrel SOR-500,
+    /// added 2026-09-25). Offline players included; nobody who never joined is in it.
+    record known-player {
+        /// The UUID the whitelist and ban lists name this account by: the Mojang UUID for
+        /// Java, the Floodgate UUID (`00000000-0000-0000-000X-XXXXXXXXXXXX`) for Bedrock.
+        uuid: uuid,
+        /// The name they last joined with, without Floodgate's `.` prefix.
+        name: string,
+        /// Whether this account plays Bedrock.
+        bedrock: bool,
+        /// When they first and last joined, in Unix seconds.
+        first-seen: u64,
+        last-seen: u64,
+    }
+
     /// Represents the difficulty setting of a Minecraft server.
     enum difficulty {
         /// Hostile mobs do not spawn. Players regain health automatically.
@@ -282,5 +297,18 @@ interface server {
 
         /// Broadcasts custom server links to all connected players (displayed in the client Esc pause menu in 1.21+).
         set-server-links: func(links: list<server-link>);
+
+        /// Everyone who has joined with this name, most recently seen first (Sorrel SOR-500,
+        /// added 2026-09-25). Matching ignores case, a leading `.` and spaces written as
+        /// underscores, as the whitelist commands do. Two entries means a Java and a Bedrock
+        /// account share the name.
+        get-known-players-named: func(name: string) -> list<known-player>;
+
+        /// The account with this list UUID, if it has joined (Sorrel SOR-500, added 2026-09-25).
+        get-known-player: func(id: uuid) -> option<known-player>;
+
+        /// Every player who has joined, in the order they first joined (Sorrel SOR-500, added
+        /// 2026-09-25). For name completion and search; it is never trimmed.
+        list-known-players: func() -> list<known-player>;
     }
 }
