@@ -133,6 +133,36 @@ interface server {
         last-seen: u64,
     }
 
+    /// Why the server turned a login away (Sorrel SOR-728, added 2026-09-25).
+    enum login-refusal {
+        /// The account is on the ban list.
+        banned,
+        /// The whitelist is on and does not name them.
+        not-whitelisted,
+        /// The address they connected from is banned.
+        ip-banned,
+        /// The server was full.
+        server-full,
+        /// A plugin cancelled the login.
+        plugin,
+    }
+
+    /// A login the server turned away, on either edition (Sorrel SOR-728, added 2026-09-25).
+    record refused-login {
+        /// Increases by one with every refusal since the server started; never reused.
+        sequence: u64,
+        /// The name they tried to join with, without Floodgate's `.` prefix.
+        name: string,
+        /// The UUID the whitelist and ban lists would name them by: the Mojang UUID for Java,
+        /// the Floodgate UUID for Bedrock.
+        uuid: uuid,
+        /// Whether they tried to join from Bedrock.
+        bedrock: bool,
+        reason: login-refusal,
+        /// When, in Unix seconds.
+        at: u64,
+    }
+
     /// Represents the difficulty setting of a Minecraft server.
     enum difficulty {
         /// Hostile mobs do not spawn. Players regain health automatically.
@@ -310,5 +340,11 @@ interface server {
         /// Every player who has joined, in the order they first joined (Sorrel SOR-500, added
         /// 2026-09-25). For name completion and search; it is never trimmed.
         list-known-players: func() -> list<known-player>;
+
+        /// The logins the server turned away most recently, on both editions, numbered after
+        /// `after`, oldest first (Sorrel SOR-728, added 2026-09-25). The last 100 are kept, in
+        /// memory only. `after` = 0 gives all of them; pass the last `sequence` seen to read
+        /// only what is new. For a sign-up queue of people who tried to join.
+        get-refused-logins: func(after: u64) -> list<refused-login>;
     }
 }
