@@ -18,6 +18,7 @@ interface player {
     use statistics.{statistic-category, custom-statistic};
     use inventory.{inventory, player-inventory};
     use sounds.{sound, sound-category};
+    use entity-types.{entity-type};
     use particles.{particle};
     use entity-statuses.{entity-status};
 
@@ -951,6 +952,18 @@ interface player {
         send-block-change: func(pos: block-pos, block-id: u16);
         /// Resets a temporary fake block change by resending the actual world block at that position.
         reset-block-change: func(pos: block-pos);
+
+        /// Spawns an entity that only this player is ever sent (Sorrel SOR-711, 2026-09-25).
+        ///
+        /// The entity is placed at `pos` in this player's current world and is otherwise an
+        /// ordinary entity: the returned handle takes the usual setters (`display-entity`,
+        /// `text-display-entity`, ...) and `remove`. The entity tracker pairs it with this
+        /// player and nobody else, so other players are never told it exists, and it is never
+        /// saved: anything a plugin leaves behind is gone when its chunk unloads or the server
+        /// stops. For per-player markers in the world - outlines, labels, previews. A Bedrock
+        /// client is sent it only if Bedrock has an equivalent entity (a display entity has
+        /// none).
+        spawn-private-entity: func(entity-type: entity-type, pos: position) -> entity;
 
         /// Sends a hurt / damage-tilt animation to the player's client (causes screen shake in the given yaw direction).
         send-hurt-animation: func(yaw: f32);
