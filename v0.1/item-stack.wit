@@ -100,5 +100,30 @@ interface item-stack {
         set-component: func(component: data-component, value: list<u8>);
         /// Removes a data component from this item stack.
         remove-component: func(component: data-component);
+
+        /// Returns this stack as a container stores it on disk: `{id, count, components}`.
+        ///
+        /// Binary NBT with an unnamed root compound. Every component is kept, including ones this
+        /// server does not understand and removed-component (`!name`) entries, so a plugin can hold
+        /// an item (an auction lot, a mailbox parcel) and give back exactly what it was given.
+        /// Pair it with `data-version` when storing it. Added 2026-09-25 (Sorrel SOR-731).
+        to-nbt: func() -> list<u8>;
+
+        /// Builds a stack from `to-nbt`'s bytes, written by a server at `data-version`.
+        ///
+        /// Item and attribute names are brought forward from `data-version` as a chunk load does.
+        /// Fails, with a message saying why, for data older than 1.20.5, an unknown item, or a
+        /// count of zero - it never returns an empty stack in place of an item. Added 2026-09-25
+        /// (Sorrel SOR-731).
+        from-nbt: static func(nbt: list<u8>, data-version: s32) -> result<item-stack, string>;
+
+        /// Builds a stack from vanilla SNBT text such as `{id:"minecraft:stone",count:3}`.
+        ///
+        /// This is the form `/give` takes and the form Paper's item YAML carries per component.
+        /// Otherwise as `from-nbt`. Added 2026-09-25 (Sorrel SOR-731).
+        from-snbt: static func(snbt: string, data-version: s32) -> result<item-stack, string>;
+
+        /// The data version `to-nbt` writes (Minecraft 26.3 is 5023). Added 2026-09-25 (Sorrel SOR-731).
+        data-version: static func() -> s32;
     }
 }
