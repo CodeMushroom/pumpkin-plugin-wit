@@ -1,7 +1,7 @@
 /// The main entry point for a Pumpkin plugin.
 /// This world defines the exports that the plugin must provide to the host
 /// and the imports that the host provides to the plugin.
-package pumpkin:plugin@1.0.0;
+package pumpkin:plugin@1.1.0;
 
 world plugin {
     use context.{context};
@@ -118,4 +118,28 @@ world plugin {
 
     /// Dispatches a chunk generation phase to the plugin.
     export handle-generate-phase: func(generator-id: u32, phase: generation-phase, chunk: chunk-buffer);
+}
+
+/// A plugin that also answers named queries and actions (SOR-037, since 1.1.0).
+///
+/// `plugin` plus two exports. The host looks both up by name, so a component built for
+/// `plugin` (1.0.0 or 1.1.0) without them still loads; it just cannot register names. New
+/// exports on the `1.x` track are optional in this way, or they are a major version
+/// (`docs/11`, ABI rules). The Rust `pumpkin-plugin-api` builds against this world.
+world plugin-with-registry {
+    include plugin;
+
+    use context.{action-call};
+    use server.{server as query-server};
+
+    /// Answers a query this plugin registered with `context.register-query`. `err` publishes
+    /// as "unavailable", never as a zero. Return a string you already built (the host keeps
+    /// at most 1 MiB and gives each call 50 ms; a slower answer keeps the previous one,
+    /// marked stale).
+    export handle-query: func(query-id: u32, server: query-server) -> result<string, string>;
+
+    /// Performs an action this plugin registered with `context.register-action`. Check
+    /// `call.actor` before changing anything on someone's behalf; `err` is shown to the
+    /// caller as it is.
+    export handle-action: func(action-id: u32, server: query-server, call: action-call) -> result<string, string>;
 }

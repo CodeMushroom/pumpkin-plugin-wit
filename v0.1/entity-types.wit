@@ -1,4 +1,4 @@
-package pumpkin:plugin@1.0.0;
+package pumpkin:plugin@1.1.0;
 
 interface entity-types {
   /// An entity type, as a registry key such as "pig" or "minecraft:zombie".

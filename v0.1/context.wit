@@ -29,6 +29,22 @@ interface context {
         issued-at: string,
     }
 
+    /// One call to a named action (SOR-037, SOR-781), as `handle-action` receives it.
+    ///
+    /// Since 1.1.0. The host fills `actor` and `via`; a web plugin cannot choose either
+    /// (`docs/35` section 3.4). The plugin that registered the action decides whether `actor`
+    /// may do it - authorization lives with the data it protects.
+    record action-call {
+        /// Whatever the caller sent. JSON by convention; nothing above the handler enforces it.
+        payload: string,
+        /// The game UUID (hyphenated) of the signed-in person the call is made for, or `none`
+        /// when nobody is (a website timer, an operator's own tooling).
+        actor: option<string>,
+        /// The name of the web plugin the call came through, or `@portal` when the portal
+        /// host made it itself.
+        via: string,
+    }
+
     /// A contextual handle for plugin-related operations.
     resource context {
         /// Registers a handler for a specific event.
@@ -44,6 +60,33 @@ interface context {
         /// * `command`: The command definition.
         /// * `permission`: The required permission node to execute this command.
         register-command: func(command: command, permission: string);
+
+        /// Registers a named reading (a query) for the management API (SOR-037).
+        ///
+        /// Since 1.1.0. The host answers readers from a snapshot it refreshes by calling
+        /// `handle-query` at most once every `interval-seconds` - never once per reader, and
+        /// never from the tick. Build the answer when your data changes and return the string
+        /// you already have: every call holds the server's one plugin call permit (SOR-060).
+        ///
+        /// Refused (`err`) when:
+        /// * the plugin does not export `handle-query` (build against the
+        ///   `plugin-with-registry` world, which the Rust `pumpkin-plugin-api` does);
+        /// * `name` is not `<namespace>.<name>` in lowercase letters, digits, `-` and `.`;
+        /// * the namespace is neither the plugin's own name nor one it declared with a
+        ///   `registry.namespace.<namespace>` permission (`server` is core's, never a plugin's);
+        /// * another plugin already registered `name`.
+        ///
+        /// * `handler-id`: passed back to `handle-query`.
+        /// * `interval-seconds`: how stale a reader may see it; clamped to 1..=3600.
+        register-query: func(name: string, handler-id: u32, interval-seconds: u32) -> result<_, string>;
+
+        /// Registers a named action for the management API (SOR-037).
+        ///
+        /// Since 1.1.0. Called on demand through `handle-action`, one call per request, off
+        /// the tick. The same naming rules and refusals as `register-query`, with
+        /// `handle-action` as the export it needs. The host allows at most 2 actions in flight
+        /// server-wide and waits 2 s for each.
+        register-action: func(name: string, handler-id: u32) -> result<_, string>;
 
         /// Registers a permission node with the server.
         register-permission: func(permission: permission) -> result<_, string>;

@@ -1,4 +1,4 @@
-package pumpkin:plugin@1.0.0;
+package pumpkin:plugin@1.1.0;
 
 interface java-packets {
   use uuid.{ uuid };
