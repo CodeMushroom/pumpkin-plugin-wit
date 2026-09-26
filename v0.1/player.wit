@@ -20,6 +20,7 @@ interface player {
     use sounds.{sound, sound-category};
     use entity-types.{entity-type};
     use particles.{particle};
+    use particle-options.{particle-burst};
     use entity-statuses.{entity-status};
 
     /// Represents per-player weather condition overrides.
@@ -943,8 +944,14 @@ interface player {
         /// Stops a custom sound identifier from playing for this player.
         stop-custom-sound: func(sound-name: option<string>, category: option<sound-category>);
 
-        /// Spawns particles visible only to this player.
+        /// Spawns particles visible only to this player, on either edition. A particle type that
+        /// takes options is not sent to Java through this call (except `dust`, as vanilla's red):
+        /// use `send-particle-bursts` with its options.
         spawn-particles: func(particle: particle, pos: position, count: u32, offset: position, max-speed: f32);
+
+        /// Sends several bursts to this player alone, in one call, on either edition; each burst
+        /// carries its type's options (SOR-727, added 2026-09-25).
+        send-particle-bursts: func(bursts: list<particle-burst>);
 
         // Visuals & Client Overrides
 

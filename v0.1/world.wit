@@ -4,6 +4,7 @@ interface %world {
     use text.{text-component};
     use scoreboard.{scoreboard};
     use particles.{particle};
+    use particle-options.{particle-burst, particle-audience};
     use sounds.{sound, sound-category};
     use entity-types.{entity-type};
     use biomes.{biome};
@@ -870,8 +871,15 @@ interface %world {
         /// Plays a custom resource pack sound identifier at the specified position for all players in the world.
         play-custom-sound: func(sound-name: string, category: sound-category, pos: position, volume: f32, pitch: f32);
 
-        /// Spawns particles at the specified position.
+        /// Spawns particles at the specified position, for the Java and Bedrock players within
+        /// 32 blocks of it. A particle type that takes options is not sent to Java through this
+        /// call (except `dust`, as vanilla's red): use `spawn-particle-bursts` with its options.
         spawn-particle: func(particle: particle, pos: position, offset: position, max-speed: f32, count: s32);
+
+        /// Spawns several bursts in one call, each for the players within 32 blocks of it of the
+        /// editions `audience` names; each burst carries its type's options (SOR-727, added
+        /// 2026-09-25).
+        spawn-particle-bursts: func(bursts: list<particle-burst>, audience: particle-audience);
 
         /// Creates an explosion at the specified position.
         create-explosion: func(pos: position, power: f32, create-fire: bool, interaction: explosion-interaction);

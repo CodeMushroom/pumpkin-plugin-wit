@@ -1,0 +1,60 @@
+package pumpkin:plugin@1.0.0;
+
+/// Particle options, particle batches, and which edition a particle reaches.
+///
+/// Added 2026-09-25 (SOR-727). Additive: `world.spawn-particle` and `player.spawn-particles`
+/// keep their signatures. Kept out of `particles.wit`, which `pumpkin-codegen` regenerates.
+interface particle-options {
+    use particles.{particle};
+
+    /// `dust`'s options: an 0xRRGGBB colour, and a size from 0.01 to 4.0 (clamped to that).
+    record dust-options {
+        color: u32,
+        scale: f32,
+    }
+
+    /// `geyser-base`'s and `geyser-poof`'s options.
+    record geyser-base-options {
+        /// Blocks of water over the geyser, at least 1.
+        water-blocks: u32,
+        /// The burst's base impulse.
+        burst-impulse-base: f32,
+    }
+
+    /// The options a particle type takes. A burst is sent to Java only with the options its
+    /// type takes: a type that takes options sent without them (except `dust`, which defaults to
+    /// vanilla's red at size 1), with the wrong kind, or with options it does not take, is not
+    /// sent to Java at all, because a Java client disconnects on the malformed packet. Bedrock
+    /// draws its own particles and ignores these, except `dust`'s colour.
+    variant particle-data {
+        /// `dust`.
+        dust(dust-options),
+        /// `geyser` and `geyser-plume`: blocks of water, at least 1.
+        geyser(u32),
+        /// `geyser-base` and `geyser-poof`.
+        geyser-base(geyser-base-options),
+    }
+
+    /// Which players a world particle call reaches.
+    enum particle-audience {
+        /// Java and Bedrock players.
+        everyone,
+        /// Java players only.
+        java-only,
+        /// Bedrock players only.
+        bedrock-only,
+    }
+
+    /// One burst of particles: what vanilla's particle packet carries.
+    record particle-burst {
+        particle: particle,
+        data: option<particle-data>,
+        /// The centre, x y z.
+        position: tuple<f64, f64, f64>,
+        /// The spread on each axis; with `count` 0, the direction the one particle moves.
+        offset: tuple<f32, f32, f32>,
+        speed: f32,
+        /// 0 is one particle at `position` moving along `offset`; more is that many, spread.
+        count: u32,
+    }
+}
