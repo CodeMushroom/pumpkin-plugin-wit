@@ -37,8 +37,9 @@ interface context {
     record action-call {
         /// Whatever the caller sent. JSON by convention; nothing above the handler enforces it.
         payload: string,
-        /// The game UUID (hyphenated) of the signed-in person the call is made for, or `none`
-        /// when nobody is (a website timer, an operator's own tooling).
+        /// Who the call is made for: the game UUID (hyphenated) of a signed-in player, or
+        /// `admin:<account>` for a server admin signed in by email (who has access to everything:
+        /// treat it as holding every staff permission), or `none` when nobody is (a website timer).
         actor: option<string>,
         /// The name of the web plugin the call came through, or `@portal` when the portal
         /// host made it itself.
