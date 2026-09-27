@@ -29,6 +29,15 @@ interface server {
         /// Gets the effective permission level for a player UUID (returns zero if not op).
         get-permission-level: func(id: uuid) -> permission-level;
 
+        /// Checks a permission node for a player UUID, online or offline (SOR-778 lane L5).
+        ///
+        /// Online, it asks the player, so a permission plugin answering the check event is
+        /// heard, exactly as `player.has-permission`. Offline, it answers from the grants the
+        /// server stored for that UUID and the node's default at the player's op level. For a
+        /// game plugin deciding whether a website actor (`action-call.actor`) may do a staff
+        /// action while that person is not in the world.
+        has-permission: func(id: uuid, node: string) -> bool;
+
         /// Grants operator status to a player (online or offline) with the specified level and bypass setting.
         op-player: func(name: string, id: uuid, level: permission-level, bypasses-player-limit: bool);
 
