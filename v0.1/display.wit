@@ -168,4 +168,35 @@ interface display {
         get-last-attacker: func() -> option<uuid>;
         get-last-interaction: func() -> option<uuid>;
     }
+
+    /// Resource specifically for dropped Item entities (`item`).
+    ///
+    /// Added 2026-10-13 (Sorrel SOR-1301). `player.spawn-private-entity("item")` makes an item
+    /// with nothing in it; this gives it a stack and the two switches a plugin's showcase item
+    /// needs. A Bedrock client draws a dropped item spinning and bobbing on its own, with no
+    /// per-tick traffic, which is what a Bedrock player is shown where a Java one is given a
+    /// block display. `set-has-gravity(false)` on the entity holds it where it was put.
+    ///
+    /// An item with an empty stack is sent to no Bedrock client. `set-stack` sends the item to
+    /// the Bedrock clients that watch it (a Bedrock client holds the stack in the item's spawn,
+    /// so a new stack is a new actor) and updates a Java client's metadata.
+    ///
+    /// A private item that has no gravity is not ticked, and nothing in the world damages it.
+    resource item-entity {
+        from-entity: static func(entity: borrow<entity>) -> option<item-entity>;
+        get-entity: func() -> entity;
+
+        /// The stack the item carries; none while it is empty.
+        get-stack: func() -> option<item-stack>;
+        /// Replaces the stack. An empty stack takes the item out of a Bedrock client's sight.
+        set-stack: func(stack: item-stack);
+
+        /// Whether the item never ages out and never merges into another.
+        get-never-despawn: func() -> bool;
+        set-never-despawn: func(never-despawn: bool);
+
+        /// Whether nothing may pick the item up: not a player, a mob, a hopper or a cart.
+        get-never-pickup: func() -> bool;
+        set-never-pickup: func(never-pickup: bool);
+    }
 }
