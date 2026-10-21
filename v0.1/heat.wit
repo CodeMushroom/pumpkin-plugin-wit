@@ -1,0 +1,16 @@
+package pumpkin:plugin@1.2.0;
+
+/// Area heat: decaying counters per cell of a world (since 1.2.0; Sorrel `docs/41` 5.2.5).
+///
+/// Channels are declared in the plugin's `mobmod` bundle. Spawn rules read them; a plugin can also
+/// add to and read its own channels as a general counter. Memory only: heat is lost on restart.
+///
+/// Needs the `mobmod` permission.
+interface heat {
+    /// Adds `amount` to the cell holding block (`x`, `z`) of `world`, on this plugin's `channel`.
+    /// An unknown channel is ignored.
+    add: func(channel: string, %world: string, x: s32, z: s32, amount: f32);
+
+    /// The current (decayed) heat of the cell holding block (`x`, `z`); 0 for an unknown channel.
+    get: func(channel: string, %world: string, x: s32, z: s32) -> f32;
+}

@@ -1,0 +1,452 @@
+package pumpkin:plugin@1.2.0;
+
+/// Mob modifiers, the behaviour library and spawn rules (since 1.2.0; Sorrel `docs/41` 5.2).
+///
+/// A plugin describes, as data, how some naturally spawned mobs are changed: which spawns qualify
+/// (a spawn rule), what a changed mob becomes at a given level (a profile: attributes, name, gear,
+/// drops, flags and behaviours), and the area counters that slow promotion down where it happens
+/// often (heat channels). It pushes all of it in one `configure` call; the server checks the whole
+/// bundle and either applies all of it or refuses all of it with a list of problems. Everything
+/// that runs per mob or per tick then runs inside the server - the plugin is called only when it
+/// asks for something.
+///
+/// Everything is owned by the plugin that pushed it: a plugin sees and changes only its own rules,
+/// profiles, channels, changed mobs and death records.
+///
+/// Ids that Minecraft grows (entity types, items, attributes, particles, sounds, effects,
+/// enchantments, damage types, structures, dimensions) are namespaced strings such as
+/// `minecraft:zombie`, never enums, so a new game version never changes this interface.
+///
+/// Needs the `mobmod` permission in the plugin's metadata.
+interface mobmod {
+    use %world.{entity, living-entity};
+
+    /// The server's fingerprint of a configured bundle. The same bundle always has the same
+    /// generation, across restarts, so a changed mob saved under it is re-profiled only when
+    /// the data really changed.
+    type generation = u64;
+
+    // ---- shared pieces ----
+
+    /// Something a rule can test about a spawn.
+    variant condition {
+        /// Always true (for an unconditional adjustment).
+        always,
+        /// Block light at the spawn position is at most this.
+        block-light-at-most(u8),
+        /// The spawn's block y is below this.
+        below-y(s32),
+        /// The spawn's block y is at or above this.
+        at-or-above-y(s32),
+        /// The world's time of day is night (vanilla: the sky is dark enough for monsters).
+        night,
+        /// The world's time of day is day.
+        day,
+        /// It is thundering in the spawn's world.
+        thundering,
+        /// The position is inside the bounds of one of these structures (an empty list: any).
+        in-structure(list<string>),
+        /// The position can see the sky.
+        sky-visible,
+    }
+
+    /// A modifier operation, as vanilla's `AttributeModifier.Operation`.
+    enum scaling-operation {
+        add-value,
+        add-multiplied-base,
+        add-multiplied-total,
+    }
+
+    /// One attribute that grows with level: `amount = base + per-level * level`, at most `max`,
+    /// applied as one attribute modifier with `operation`.
+    record attribute-scaling {
+        /// For example `minecraft:max_health`.
+        attribute: string,
+        operation: scaling-operation,
+        base: f64,
+        per-level: f64,
+        max: option<f64>,
+    }
+
+    /// A name colour from a level on (the highest `from-level` not above the mob's level wins).
+    record level-colour {
+        from-level: u32,
+        /// A named chat colour (`white`, `green`, `gold`, `red`, `dark_purple`, ...).
+        colour: string,
+    }
+
+    /// The custom name of a changed mob.
+    record name-format {
+        /// Plain text with `{type}` (the entity type's English name) and `{level}`.
+        format: string,
+        colours: list<level-colour>,
+        /// Always shown, not only when looked at.
+        always-visible: bool,
+    }
+
+    record enchantment-level {
+        enchantment: string,
+        level: u32,
+    }
+
+    /// One equipment slot: `head`, `chest`, `legs`, `feet`, `mainhand` or `offhand`.
+    record gear-piece {
+        slot: string,
+        item: string,
+        enchantments: list<enchantment-level>,
+        /// Chance the piece drops when the mob dies, 0..1 (vanilla's default is 0.085).
+        drop-chance: f32,
+    }
+
+    /// The gear for a range of levels (inclusive).
+    record gear-set {
+        from-level: u32,
+        to-level: u32,
+        pieces: list<gear-piece>,
+    }
+
+    record drop-rules {
+        keep-vanilla-loot: bool,
+        /// Multiplies the experience the mob drops.
+        xp-multiplier: f32,
+        refuse-item-pickup: bool,
+    }
+
+    /// Extra maximum health while several players fight the mob: `step` of the base maximum
+    /// per extra player within `radius`, up to `max-extra-players`.
+    record group-health {
+        step: f32,
+        max-extra-players: u32,
+        radius: f32,
+    }
+
+    record boss-bar-spec {
+        from-level: u32,
+        /// `pink`, `blue`, `red`, `green`, `yellow`, `purple` or `white`.
+        colour: string,
+    }
+
+    record profile-flags {
+        refuse-vehicles: bool,
+        no-reinforcements: bool,
+        /// Heal to full after this many seconds without damage.
+        heal-when-left-alone-after-s: option<u32>,
+        /// Never despawn for this many seconds after a player hit it.
+        despawn-hold-after-hit-s: option<u32>,
+        group-health: option<group-health>,
+        boss-bar: option<boss-bar-spec>,
+        /// Shown on the action bar the first time a player and the mob fight: plain text with
+        /// `{name}`, `{level}` and `{behaviours}`.
+        first-contact-line: option<string>,
+    }
+
+    // ---- the behaviour library ----
+
+    /// The warning a behaviour gives before it acts.
+    record telegraph {
+        /// A particle id; must have a Bedrock mapping.
+        particle: string,
+        particle-count: u32,
+        /// A sound event id; must have a Bedrock mapping.
+        sound: string,
+        volume: f32,
+        pitch: f32,
+        /// The mob stops moving while it winds up.
+        pause-movement: bool,
+    }
+
+    record effect-spec {
+        effect: string,
+        amplifier: u8,
+        duration-ticks: u32,
+    }
+
+    record lunge-params {
+        windup-ticks: u32,
+        range-min: f32,
+        range-max: f32,
+        leap-speed: f32,
+        damage-multiplier: f32,
+        cooldown-ticks: u32,
+        telegraph: telegraph,
+    }
+
+    record volley-params {
+        windup-ticks: u32,
+        arrows: u32,
+        spread-degrees: f32,
+        arrow-speed: f32,
+        cooldown-ticks: u32,
+        telegraph: telegraph,
+    }
+
+    record quick-fuse-params {
+        fuse-ticks: u32,
+        telegraph: telegraph,
+    }
+
+    record shockwave-params {
+        windup-ticks: u32,
+        radius: f32,
+        knockback: f32,
+        effect: option<effect-spec>,
+        hits-airborne: bool,
+        cooldown-ticks: u32,
+        telegraph: telegraph,
+    }
+
+    record guard-params {
+        raise-ticks: u32,
+        interval-ticks: u32,
+        frontal-arc-degrees: f32,
+        /// Fraction of frontal damage removed while raised, 0..1.
+        damage-reduction: f32,
+        telegraph: telegraph,
+    }
+
+    record summon-allies-params {
+        trigger-health-fraction: f32,
+        count: u32,
+        entity-type: string,
+        radius: f32,
+        allies-drop-nothing: bool,
+        despawn-with-summoner: bool,
+        once: bool,
+        telegraph: telegraph,
+    }
+
+    record enrage-params {
+        trigger-health-fraction: f32,
+        effects: list<effect-spec>,
+        attack-interval-multiplier: f32,
+        /// The name and boss bar colour once enraged.
+        display-colour: string,
+        telegraph: telegraph,
+    }
+
+    record blink-params {
+        unreachable-ticks: u32,
+        max-distance: f32,
+        safe-spot-radius: u32,
+        cooldown-ticks: u32,
+        telegraph: telegraph,
+    }
+
+    /// One behaviour with its numbers. Every behaviour is idle until the mob has a target.
+    variant behaviour-spec {
+        lunge(lunge-params),
+        volley(volley-params),
+        quick-fuse(quick-fuse-params),
+        shockwave(shockwave-params),
+        guard(guard-params),
+        summon-allies(summon-allies-params),
+        enrage(enrage-params),
+        blink(blink-params),
+    }
+
+    /// A behaviour a profile may give a mob.
+    record behaviour-option {
+        /// Offered only from this level on.
+        from-level: u32,
+        /// Given to every mob of the profile at or above `from-level`, and not counted in the
+        /// picks (Blink is the case `docs/41` 2.3 names).
+        always: bool,
+        /// Only for these entity types (an empty list: any type the profile is applied to).
+        entity-types: list<string>,
+        spec: behaviour-spec,
+    }
+
+    /// How many non-`always` behaviours a mob gets, from a level on.
+    record behaviour-count {
+        from-level: u32,
+        min: u32,
+        max: u32,
+    }
+
+    /// What a changed mob becomes. Resolved once, when it is applied, and stored on the mob.
+    record profile {
+        id: string,
+        scaling: list<attribute-scaling>,
+        name: name-format,
+        gear: list<gear-set>,
+        drops: drop-rules,
+        %flags: profile-flags,
+        behaviours: list<behaviour-option>,
+        counts: list<behaviour-count>,
+    }
+
+    // ---- spawn rules ----
+
+    /// Vanilla's `EntitySpawnReason`, in full.
+    enum spawn-reason {
+        natural,
+        chunk-generation,
+        spawner,
+        structure,
+        breeding,
+        mob-summoned,
+        jockey,
+        event,
+        conversion,
+        reinforcement,
+        triggered,
+        bucket,
+        spawn-item-use,
+        command,
+        dispenser,
+        patrol,
+        trial-spawner,
+        load,
+        dimension-travel,
+    }
+
+    /// A point distances are measured from (block x and z).
+    record origin {
+        x: f64,
+        z: f64,
+    }
+
+    /// Levels for a range of distances from the nearest origin: `from` inclusive, `to` exclusive
+    /// (none: no upper end). The level is uniform in `level-min ..= level-max`.
+    record distance-band {
+        %from: f64,
+        to: option<f64>,
+        level-min: u32,
+        level-max: u32,
+    }
+
+    /// An area where the rule never fires.
+    variant exclusion {
+        circle(circle-area),
+        box(box-area),
+    }
+
+    record circle-area {
+        x: f64,
+        z: f64,
+        radius: f64,
+    }
+
+    record box-area {
+        min-x: f64,
+        min-z: f64,
+        max-x: f64,
+        max-z: f64,
+    }
+
+    record level-adjustment {
+        when: condition,
+        add: s32,
+    }
+
+    record chance-multiplier {
+        when: condition,
+        factor: f64,
+    }
+
+    /// Which profile a promoted mob gets, by entity type and level (inclusive).
+    record profile-pick {
+        entity-types: list<string>,
+        from-level: u32,
+        to-level: u32,
+        profile: string,
+    }
+
+    /// When a spawn is promoted. Evaluated for every spawn whose reason is in `reasons`, after
+    /// vanilla has finished the spawn. The chance is `chance`, times every matching multiplier,
+    /// times `0.5^(heat / halving-heat)` of the heat channel.
+    record spawn-rule {
+        id: string,
+        reasons: list<spawn-reason>,
+        /// For example `minecraft:overworld`.
+        dimensions: list<string>,
+        entity-types: list<string>,
+        origins: list<origin>,
+        /// Multiplies the measured distance before the bands are read (8 in the Nether).
+        distance-scale: f64,
+        bands: list<distance-band>,
+        exclusions: list<exclusion>,
+        /// Every inner list must have at least one condition that holds (an empty outer list:
+        /// no requirement).
+        requires: list<list<condition>>,
+        level-adjustments: list<level-adjustment>,
+        level-min: option<u32>,
+        level-max: option<u32>,
+        chance: f64,
+        chance-multipliers: list<chance-multiplier>,
+        heat-channel: option<string>,
+        profiles: list<profile-pick>,
+    }
+
+    // ---- heat ----
+
+    /// A decaying counter per square cell of a world.
+    record heat-channel {
+        name: string,
+        cell-size: u32,
+        half-life-seconds: u32,
+        /// The oldest cells are dropped beyond this.
+        max-cells: u32,
+        /// Heat added where a rule of this channel promotes a mob.
+        on-apply: f32,
+        /// Heat added where a mob promoted under this channel dies.
+        on-death: f32,
+        /// Heat at which a rule's chance halves.
+        halving-heat: f32,
+    }
+
+    // ---- the bundle ----
+
+    record bundle {
+        heat-channels: list<heat-channel>,
+        profiles: list<profile>,
+        spawn-rules: list<spawn-rule>,
+    }
+
+    /// One thing wrong with a bundle. `path` points at it (`profiles[2].behaviours[0].spec`);
+    /// `message` says what is wrong and what to do, in plain language.
+    record problem {
+        path: string,
+        message: string,
+    }
+
+    /// What a changed mob carries.
+    record modifier-info {
+        owner: string,
+        profile: string,
+        level: u32,
+        generation: generation,
+        /// The behaviours it rolled, by name (`lunge`, `blink`, ...).
+        behaviours: list<string>,
+        reason: spawn-reason,
+    }
+
+    record mobmod-stats {
+        promotions: u64,
+        changed-mobs-loaded: u32,
+        outbox-records: u32,
+        outbox-dropped-full: u64,
+        outbox-dropped-expired: u64,
+        generation: option<generation>,
+    }
+
+    /// Checks `bundle` and, if it is sound, replaces this plugin's rules, profiles and heat
+    /// channels with it in one step. Changed mobs already in the world are re-profiled to the
+    /// new numbers: their level, profile id and rolled behaviours are kept.
+    configure: func(bundle: bundle) -> result<generation, list<problem>>;
+
+    /// Drops this plugin's rules, profiles and heat channels: nothing new is promoted. Mobs
+    /// already changed keep what they have.
+    clear: func();
+
+    /// Changes one mob by a profile of this plugin, at `level`.
+    apply: func(entity: borrow<living-entity>, profile: string, level: u32) -> result<_, string>;
+
+    /// Reverts one mob of this plugin to vanilla.
+    remove: func(entity: borrow<living-entity>);
+
+    /// What a mob carries, if a plugin changed it.
+    info: func(entity: borrow<entity>) -> option<modifier-info>;
+
+    stats: func() -> mobmod-stats;
+}

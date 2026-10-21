@@ -1,0 +1,87 @@
+package pumpkin:plugin@1.2.0;
+
+/// Who fought a mob, and the record of its death (since 1.2.0; Sorrel `docs/41` 5.2.4).
+///
+/// A mob changed by `mobmod`, or one marked with `track`, carries a fight record: the players who
+/// hurt it and how much, damage from the environment by cause, how long players hurt it while it
+/// had no path to any of them, and whether it was ever in a vehicle. When it dies the server
+/// writes a death record into the owning plugin's outbox. The plugin reads with `take` and
+/// confirms with `ack`; a record stays until acknowledged, so it arrives at least once - make
+/// the effect exactly once with `death-id`. Mobs that unload, despawn or convert leave no record.
+///
+/// The server reports facts. What counts as a fair fight, and what it is worth, is the plugin's.
+///
+/// Needs the `mobmod` permission.
+interface kill-credit {
+    use %world.{living-entity};
+    use uuid.{uuid};
+    use mobmod.{generation, spawn-reason};
+
+    /// A random UUID in text form, unique across restarts.
+    type death-id = string;
+
+    /// One player who hurt the mob. Damage by their arrows, tamed wolves and lit TNT counts as
+    /// theirs, as vanilla's kill credit does.
+    record attacker {
+        player: uuid,
+        damage: f32,
+        /// They were in survival or adventure mode at their last hit.
+        survival-like: bool,
+    }
+
+    /// Damage from no entity, by vanilla damage type (`minecraft:fall`, `minecraft:lava`, ...).
+    record environment-damage {
+        cause: string,
+        damage: f32,
+    }
+
+    record fight-record {
+        /// At most 8, the largest shares first.
+        attackers: list<attacker>,
+        /// All damage by players (including any beyond the eight listed).
+        player-damage: f32,
+        /// All damage by entities that are not players and belong to no player (golems, other mobs).
+        other-entity-damage: f32,
+        environment: list<environment-damage>,
+        total-damage: f32,
+        /// The mob's maximum health when it died.
+        max-health: f32,
+        /// Ticks spent taking player damage while it had no path to any attacker.
+        unreachable-ticks: u32,
+        ever-mounted: bool,
+        /// The player credited with the kill, if any.
+        killer: option<uuid>,
+        /// From the first hit to the death.
+        fight-ticks: u32,
+        /// Ticks from the last time a player hurt it to its death; none if no player did.
+        ticks-since-player-hurt: option<u32>,
+    }
+
+    record death-record {
+        death-id: death-id,
+        entity: uuid,
+        entity-type: string,
+        /// The profile it carried (empty for a mob only tracked).
+        profile: string,
+        level: u32,
+        generation: generation,
+        reason: spawn-reason,
+        %world: string,
+        x: f64,
+        y: f64,
+        z: f64,
+        /// Unix time, milliseconds.
+        died-at-ms: u64,
+        fight: fight-record,
+    }
+
+    /// Up to `max` of this plugin's unacknowledged death records, oldest first. Records already
+    /// taken and not acknowledged are returned again.
+    take: func(max: u32) -> list<death-record>;
+
+    /// Removes these records from the outbox. Unknown ids are ignored, so a repeat is harmless.
+    ack: func(ids: list<death-id>);
+
+    /// Keeps a fight record on a mob this plugin did not change.
+    track: func(entity: borrow<living-entity>);
+}
