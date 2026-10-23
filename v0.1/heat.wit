@@ -3,7 +3,10 @@ package pumpkin:plugin@1.2.0;
 /// Area heat: decaying counters per cell of a world (since 1.2.0; Sorrel `docs/41` 5.2.5).
 ///
 /// Channels are declared in the plugin's `mobmod` bundle. Spawn rules read them; a plugin can also
-/// add to and read its own channels as a general counter. Memory only: heat is lost on restart.
+/// add to and read its own channels as a general counter. Heat survives a graceful restart: the
+/// server writes it to `world/data/sorrel-mobmod-heat.json` when it stops and reads it back when it
+/// starts, and it keeps cooling while the server is down. A crash loses the heat since the last
+/// stop. Unloading the plugin clears its heat; a reload keeps it.
 ///
 /// Needs the `mobmod` permission.
 interface heat {
