@@ -793,6 +793,8 @@ interface %world {
         z: s32,
     }
 
+    /// A load ticket (since 1.3.0).
+    ///
     /// A plugin's hold on an area of chunks, from `world.ensure-loaded` (since 1.3.0). Pass it to
     /// `world.release` when the area is no longer needed. It is not saved: a restart or an unload
     /// of the plugin releases every ticket the plugin held.
@@ -972,6 +974,8 @@ interface %world {
 
         // --- since 1.3.0 (Sorrel SOR-1432, `docs/44`) ---
 
+        /// Fills a box of blocks with one block state (since 1.3.0).
+        ///
         /// Sets every block in the box from `from` to `to` (both corners included, in either
         /// order) to the block state `state`, and returns how many blocks changed. Chunks of the
         /// box that are not loaded are loaded first, or generated if they were never saved, so the
@@ -983,6 +987,8 @@ interface %world {
         /// once a tick.
         fill: func(%from: block-pos, to: block-pos, state: u16) -> result<u32, string>;
 
+        /// Holds an area of chunks loaded and ticking (since 1.3.0).
+        ///
         /// Keeps the chunks from `min-chunk` to `max-chunk` (both included) loaded and ticking,
         /// as `/forceload` does, until `release` is called with the returned ticket, and returns
         /// once they are all loaded (generated first if they were never saved). Refused with an
@@ -990,10 +996,14 @@ interface %world {
         /// the plugin's live tickets would hold more than 4096 chunks between them.
         ensure-loaded: func(min-chunk: chunk-pos, max-chunk: chunk-pos) -> result<load-ticket, string>;
 
+        /// Ends a load ticket (since 1.3.0).
+        ///
         /// Ends a hold from `ensure-loaded`. Returns false if the ticket was not this plugin's
         /// or was released already. Chunks nothing else holds unload as any others do.
         release: func(ticket: load-ticket) -> bool;
 
+        /// Wipes an area so it generates again (since 1.3.0).
+        ///
         /// Drops the chunks from `min-chunk` to `max-chunk` (both included) from memory and from
         /// the world's saved files - blocks, block entities and entities - so the next time they
         /// load the world's generator (the plugin's own, if `set-chunk-generator` set one) makes
@@ -1004,11 +1014,12 @@ interface %world {
         /// Waits for the chunks to unload: call it from a task or a command.
         regenerate-chunks: func(min-chunk: chunk-pos, max-chunk: chunk-pos) -> result<u32, string>;
 
-        /// The entity (a player included) with this entity id in this world, if there is one.
+        /// The entity with this entity id in this world, players included (since 1.3.0).
+        ///
         /// Damage and death events carry only the id.
         get-entity: func(entity-id: s32) -> option<entity>;
 
-        /// The entity (a player included) with this UUID in this world, if there is one.
+        /// The entity with this UUID in this world, players included (since 1.3.0).
         get-entity-by-uuid: func(id: uuid) -> option<entity>;
     }
 
@@ -1049,6 +1060,8 @@ interface %world {
         fill-biome: func(biome: biome);
     }
 
+    /// The world of the event being handled (since 1.3.0).
+    ///
     /// The world of the event this plugin is handling right now, when the event's record does
     /// not name one (since 1.3.0). Set while a `block-break` handler runs; none outside an event
     /// handler, and none for events whose record names its world or has no world. A record

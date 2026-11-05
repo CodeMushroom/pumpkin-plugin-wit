@@ -1298,6 +1298,8 @@ interface player {
 
         // --- since 1.3.0 (Sorrel SOR-1432, `docs/44`) ---
 
+        /// Gives the player items as `/give` does (since 1.3.0).
+        ///
         /// Gives the player `stack` as vanilla `/give` does (26.3 `GiveCommand.giveItem`): it is
         /// added to the inventory as `Inventory.add` adds it - onto matching stacks with room
         /// (the selected slot, then the off hand, then the rest), then into empty slots, a
@@ -1308,6 +1310,8 @@ interface player {
         /// not changed.
         give-item: func(stack: borrow<item-stack>) -> u32;
 
+        /// Sets where the player respawns, in any world (since 1.3.0).
+        ///
         /// Makes the player respawn at `pos` in `world-ref` the next times they die, instead of
         /// at their bed, anchor or the world spawn, as a forced `/spawnpoint` does (no bed or
         /// anchor is needed and the spot is not checked). Unlike `set-respawn-location`, the

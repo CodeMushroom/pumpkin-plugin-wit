@@ -236,6 +236,8 @@ interface event {
         cancelled: bool
     }
 
+    /// A block broken.
+    ///
     /// The world the block is in is `world.current-event-world()` while the handler runs
     /// (since 1.3.0).
     record block-break-event-data {
@@ -418,6 +420,8 @@ interface event {
         player: player,
         death-message: text-component,
         dropped-exp: s32,
+        /// Whether the death keeps the inventory.
+        ///
         /// Starts as the dying player's world's `keepInventory` game rule. A blocking handler
         /// that sets it keeps the player's inventory, armour, experience and score through this
         /// death exactly as the game rule does, and one that clears it drops them (honoured
