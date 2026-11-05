@@ -1,4 +1,4 @@
-package pumpkin:plugin@1.2.0;
+package pumpkin:plugin@1.3.0;
 
 /// Area heat: decaying counters per cell of a world (since 1.2.0; Sorrel `docs/41` 5.2.5).
 ///

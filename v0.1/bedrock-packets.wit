@@ -1,4 +1,4 @@
-package pumpkin:plugin@1.2.0;
+package pumpkin:plugin@1.3.0;
 
 interface bedrock-packets {
   use uuid.{ uuid };

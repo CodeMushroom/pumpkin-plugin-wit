@@ -1,4 +1,4 @@
-package pumpkin:plugin@1.2.0;
+package pumpkin:plugin@1.3.0;
 
 /// Mob modifiers, the behaviour library and spawn rules (since 1.2.0; Sorrel `docs/41` 5.2).
 ///

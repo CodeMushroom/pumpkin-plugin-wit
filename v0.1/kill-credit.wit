@@ -1,4 +1,4 @@
-package pumpkin:plugin@1.2.0;
+package pumpkin:plugin@1.3.0;
 
 /// Who fought a mob, and the record of its death (since 1.2.0; Sorrel `docs/41` 5.2.4).
 ///
