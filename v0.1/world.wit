@@ -14,6 +14,7 @@ interface %world {
     use game-rules.{game-rule, game-rule-value};
 
     use uuid.{uuid};
+    use status-effect.{status-effect-type, status-effect-instance};
 
     /// Equipment slots available on living entities (mobs, armor stands, players).
     enum equipment-slot {
@@ -567,6 +568,19 @@ interface %world {
         get-age: func() -> s32;
         set-age: func(age: s32);
         send-system-message: func(message: text-component);
+
+        // --- since 1.3.0 (Sorrel SOR-1432) ---
+
+        /// Gives this entity a status effect (since 1.3.0).
+        ///
+        /// Applies `effect` the way `/effect give` does, merging with an effect of the same type the
+        /// entity already has. `duration` is in game ticks. Works on mobs and players alike; for a
+        /// player it is the same as `player.add-effect`.
+        add-effect: func(effect: status-effect-instance);
+        /// Removes a status effect from this entity, if it has it (since 1.3.0).
+        remove-effect: func(effect: status-effect-type);
+        /// Whether this entity has a status effect now (since 1.3.0).
+        has-effect: func(effect: status-effect-type) -> bool;
     }
 
     /// Represents an AI-driven mob entity with goals, targeting, and pathfinding navigation (e.g. zombies, villagers).

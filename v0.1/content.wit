@@ -1,0 +1,90 @@
+package pumpkin:plugin@1.3.0;
+
+/// Custom entities from expansion packs (since 1.3.0; Sorrel `docs/43` sections 5.5 and 8).
+///
+/// An expansion pack declares its custom entities in its `pack.toml`: each one's id
+/// (`overture:ferrumaw`), the vanilla mob a player without the pack sees (its stand-in), its hit
+/// box, its animation states and how long each lasts. This interface lets the pack's plugin spawn
+/// them, move them between their states, and switch their declared properties (a second texture).
+/// The server draws every change on both editions: Java players see a rig of display entities
+/// posed for the state, Bedrock players see the pack's own actor with the `<namespace>:state`
+/// actor property. Nothing here takes or returns an edition.
+///
+/// **States.** A custom entity is always in one of the states its `pack.toml` declares. The
+/// server itself moves it between `idle` and `walk` as it stands or moves, into `attack` when its
+/// melee goal strikes (the damage lands at the state's `hit_tick`), into `hurt` when it is hurt,
+/// and into `death` when it dies. Every other state (`charge`, `shell`, `slam`, ...) is entered
+/// only by `set-state`:
+///
+/// - A state marked `held = true` in `pack.toml` stays until the plugin sets another state or
+///   clears it. Each edition's art decides whether it loops or holds its last frame.
+/// - Any other state plays for its `ticks` and then the entity goes back to `idle` or `walk`.
+/// - While the entity is in a state the plugin set, the server does not interrupt it with `hurt`
+///   and its melee goal does not start an `attack`. Only `death` overrides it.
+///
+/// `hit_tick` of a state the plugin sets is for the art only: the server applies no damage for
+/// it. The plugin applies its own, on that tick, so both editions show the blow when it lands.
+///
+/// **Ownership.** Every call that names an id or changes an entity needs the
+/// `registry.namespace.<namespace>` permission for the id's namespace (`registry.namespace.overture`),
+/// the same permission that makes a plugin the owner of that namespace's management names. A
+/// plugin may read (`get-state`, `get-custom-id`) any custom entity.
+///
+/// Every call is one host call and none waits on the network; use them from tasks and event
+/// handlers as often as the fight needs.
+interface content {
+    use %world.{%world, entity};
+    use common.{position};
+
+    /// Spawns a custom entity of an installed pack (since 1.3.0).
+    ///
+    /// Spawns the custom entity `id` (a `[[entity]]` id of an installed `pack.toml`, such as
+    /// `overture:gnarlroot`) in `world-ref` at `pos`, facing `yaw` (degrees, as `entity.get-yaw`
+    /// reads). It starts in `idle`, at full health, with the hit box, attributes and AI its pack
+    /// declares. Returns the entity. Refused with an error, and nothing spawned, when no installed
+    /// pack declares `id`, when the plugin lacks `registry.namespace.<namespace>` for it, or when
+    /// `pos` is outside the world.
+    spawn-custom: func(id: string, world-ref: borrow<%world>, pos: position, yaw: f32) -> result<entity, string>;
+
+    /// Moves a custom entity into one of its declared states (since 1.3.0).
+    ///
+    /// Puts `e` into `state`, which its `pack.toml` must declare, starting the state's clock at 0
+    /// (setting the state it is already in starts it again). An empty string clears a state the
+    /// plugin set, and the entity goes back to `idle` or `walk`. See the interface for which states
+    /// stay and which end on their own. Refused with an error when `e` is not a custom entity,
+    /// when the plugin lacks the namespace permission, when the state is not declared, when the
+    /// state is `death` (kill the entity instead), or when the entity is already dying.
+    set-state: func(e: borrow<entity>, state: string) -> result<_, string>;
+
+    /// The state a custom entity is in (since 1.3.0).
+    ///
+    /// The name of the state `e` is in now, as its `pack.toml` spells it: `idle` or `walk` when
+    /// nothing else is playing, or the state the server or the plugin started. None when `e` is
+    /// not a custom entity.
+    get-state: func(e: borrow<entity>) -> option<string>;
+
+    /// Sets a declared property of a custom entity (since 1.3.0).
+    ///
+    /// Sets the property `name` of `e` to `value`. A pack declares a property by listing texture
+    /// variants in both edition rows of the entity (`alt_textures = { plated = "..." }`): the
+    /// property is `<namespace>:texture`, its values are `default` and each variant's name, and
+    /// it starts at `default`. Java players see every bone of the rig change to the variant's
+    /// models; Bedrock players see the actor property change, which the pack's render controller
+    /// reads. The value is saved with the entity. Refused with an error when `e` is not a custom
+    /// entity, when the plugin lacks the namespace permission, or when the entity does not declare
+    /// that property or that value.
+    set-property: func(e: borrow<entity>, name: string, value: string) -> result<_, string>;
+
+    /// The value of a declared property of a custom entity (since 1.3.0).
+    ///
+    /// The value `name` has on `e` now (`default` until `set-property` changes it). None when `e`
+    /// is not a custom entity or does not declare that property.
+    get-property: func(e: borrow<entity>, name: string) -> option<string>;
+
+    /// The pack id of a custom entity (since 1.3.0).
+    ///
+    /// The `pack.toml` id of `e` (`overture:ferrumaw`), so that damage and death handlers can tell
+    /// a boss or an add from the vanilla mob it stands in for. None when `e` is not a custom
+    /// entity.
+    get-custom-id: func(e: borrow<entity>) -> option<string>;
+}

@@ -1800,6 +1800,45 @@ interface event {
         cancelled: bool
     }
 
+    /// A smithing table's slots (since 1.3.0).
+    ///
+    /// The slots of the smithing table whose `prepare-smithing-event` or `smith-item-event` is
+    /// being handled, from `current-smithing`. Each stack is a copy: changing it changes nothing
+    /// in the table. An empty slot is none.
+    record smithing-slots {
+        /// The template slot (a smithing template, such as a netherite upgrade).
+        template: option<item-stack>,
+        /// The base slot (the item being upgraded or trimmed).
+        base: option<item-stack>,
+        /// The addition slot (the ingot or the trim material).
+        addition: option<item-stack>,
+        /// The result. In `prepare-smithing-event`: what the table will show, which a handler may
+        /// replace with `set-smithing-result` (vanilla's, or the previous handler's). In
+        /// `smith-item-event`: what the player is taking.
+        %result: option<item-stack>,
+    }
+
+    /// The smithing table of the event being handled (since 1.3.0).
+    ///
+    /// The slots of the smithing table while a `prepare-smithing-event` or `smith-item-event`
+    /// handler runs; none outside those handlers. In `prepare-smithing-event` the server has just
+    /// worked out the vanilla result of the three inputs, on either edition. In `smith-item-event`
+    /// `template`, `base` and `addition` are exactly what taking the result uses up: one of each
+    /// non-empty slot. The event records themselves cannot grow on the 1.x track without breaking
+    /// every plugin built before, so the slots come from here.
+    current-smithing: func() -> option<smithing-slots>;
+
+    /// Replaces the result of the smithing table being prepared (since 1.3.0).
+    ///
+    /// Sets what the smithing table of the `prepare-smithing-event` being handled shows as its
+    /// result, on Java and Bedrock alike: a copy of `result`, or nothing when it is none, which
+    /// blocks the recipe (the table shows no result and taking one is refused). Handlers that run
+    /// later see the new result in `current-smithing`. Taking the result still uses up one of each
+    /// input. Only a handler registered as blocking changes the table; refused with an error
+    /// outside a `prepare-smithing-event` handler. Do not open or close the player's screens from
+    /// this handler: the table is locked while it runs.
+    set-smithing-result: func(%result: option<borrow<item-stack>>) -> result<_, string>;
+
     record trade-select-event-data {
         player: player,
         slot-index: u8,

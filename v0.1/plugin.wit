@@ -85,6 +85,9 @@ world plugin {
     import kill-credit;
     /// Decaying per-area counters (since 1.2.0). Needs the `mobmod` permission.
     import heat;
+    /// Custom entities from expansion packs: spawn, states, properties (since 1.3.0). Needs
+    /// `registry.namespace.<namespace>` for the pack's namespace.
+    import content;
 
     // --- Plugin-provided exports ---
 
