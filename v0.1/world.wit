@@ -911,6 +911,15 @@ interface %world {
         /// Returns a list of all entities in this world.
         get-entities: func() -> list<entity>;
 
+        /// How many entities of `entity-type` (a registry name such as "minecraft:chicken"; the
+        /// "minecraft:" prefix may be left out) stand within `radius` blocks of `center` in this
+        /// world: their feet position no further than `radius` away in a straight line. Exact
+        /// within the tick (an entity spawned this tick is counted), alive only, players only
+        /// when `entity-type` is "minecraft:player". 0 for a type this server does not have, a
+        /// negative radius or a radius over 128. Returns a number, not a list, so it is cheap to
+        /// call from an event handler (Sorrel SOR-1513, 2026-11-24).
+        count-entities: func(entity-type: string, center: position, radius: f64) -> u32;
+
         /// Spawns a lightning bolt at the specified position.
         strike-lightning: func(pos: position, effect-only: bool);
 
@@ -1055,4 +1064,9 @@ interface %world {
 
     /// Gets the detailed block state for a numerical block state ID.
     get-block-state-by-id: func(state-id: u16) -> option<block-state>;
+
+    /// The entity (a player included) with this entity id, in any world of the server, if there
+    /// is one. Events such as `entity-enter-love-mode` and `creature-spawn` carry only the id
+    /// (Sorrel SOR-1513, 2026-11-24).
+    entity-by-id: func(entity-id: s32) -> option<entity>;
 }

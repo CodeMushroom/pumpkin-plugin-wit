@@ -2440,4 +2440,15 @@ interface event {
         raid-trigger-event(raid-trigger-event-data),
         lightning-strike-event(lightning-strike-event-data),
     }
+
+    /// Narrows which `creature-spawn` events reach this plugin's handlers (Sorrel SOR-1513,
+    /// 2026-11-24). After this call a creature spawn is delivered only when its `spawn-reason` is
+    /// one of `reasons` and its `entity-type` one of `entity-types` ("minecraft:chicken"; the
+    /// prefix may be left out); an empty list admits every value. A spawn left out costs this
+    /// plugin nothing: the server does not call it. Every mob spawn fires `creature-spawn`,
+    /// natural spawns included, so a plugin that cares about a few kinds should call this in
+    /// `on-load`. A later call replaces the filter; it lasts until the plugin is unloaded or
+    /// reloaded. Other events are not affected.
+    set-creature-spawn-filter: func(reasons: list<string>, entity-types: list<string>);
 }
+
